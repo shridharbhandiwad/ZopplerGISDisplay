@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QTimer>
+#include <QDockWidget>
 
 namespace Ui {
 class CMapMainWindow;
@@ -33,6 +34,8 @@ private slots:
 private:
     Ui::CMapMainWindow *ui;
     QTimer _m_updateTimer;
+    QDockWidget *m_dockControls;
+    QDockWidget *m_dockTracks;
 };
 
 #endif // CMAPMAINWINDOW_H

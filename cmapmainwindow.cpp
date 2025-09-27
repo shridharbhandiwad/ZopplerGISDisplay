@@ -2,6 +2,8 @@
 #include "ui_cmapmainwindow.h"
 #include "cdatawarehouse.h"
 #include <QFileDialog>
+#include <QTableWidget>
+#include <QHeaderView>
 
 CMapMainWindow::CMapMainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -11,6 +13,30 @@ CMapMainWindow::CMapMainWindow(QWidget *parent) :
     ui->widgetMapCanvas->Initialize();
     setWindowTitle("Radar Display");
 
+    // Create floating/minimizable docks for controls and track table
+    m_dockControls = new QDockWidget("Controls", this);
+    m_dockControls->setObjectName("dockControls");
+    m_dockControls->setFeatures(QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetClosable);
+    m_dockControls->setWidget(ui->widget_TextualControl);
+    addDockWidget(Qt::RightDockWidgetArea, m_dockControls);
+
+    m_dockTracks = new QDockWidget("Tracks", this);
+    m_dockTracks->setObjectName("dockTracks");
+    m_dockTracks->setFeatures(QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetClosable);
+    m_dockTracks->setWidget(ui->tableWidget);
+    addDockWidget(Qt::RightDockWidgetArea, m_dockTracks);
+
+    // Make docks tabbed for cleaner UI when docked on same edge
+    tabifyDockWidget(m_dockControls, m_dockTracks);
+    m_dockControls->raise();
+
+    // Extend styles to docks for a cohesive, attractive look
+    QString dockStyle =
+        "QDockWidget { border: 1px solid #00B8D4; background-color: #050D1A; }"
+        "QDockWidget::title { background: #00B8D4; color: white; padding: 6px; }";
+    this->setStyleSheet(this->styleSheet() + dockStyle);
+
+    // Initialize the table rows/items
     ui->tableWidget->setRowCount(100);
     for ( int i = 0; i < ui->tableWidget->rowCount(); i++ ) {
         for ( int j = 0; j < ui->tableWidget->columnCount(); j++ ) {
@@ -28,7 +54,7 @@ CMapMainWindow::CMapMainWindow(QWidget *parent) :
     _m_updateTimer.start(1000);
 
 
-    ui->widget_TextualControl->setVisible(false);
+    m_dockControls->hide();
     connect(ui->widgetMapCanvas, SIGNAL(signalMouseRead(QString)), this, SLOT(slotMouseRead(QString)));
 }
 
@@ -41,7 +67,10 @@ void CMapMainWindow::keyPressEvent(QKeyEvent *event)
 {
     switch (event->key()) {
     case Qt::Key_F:
-        ui->widget_TextualControl->setVisible(!ui->widget_TextualControl->isVisible());
+        m_dockControls->setVisible(!m_dockControls->isVisible());
+        break;
+    case Qt::Key_T:
+        m_dockTracks->setVisible(!m_dockTracks->isVisible());
         break;
     case Qt::Key_H:
         ui->widgetMapCanvas->mapHome();;;
