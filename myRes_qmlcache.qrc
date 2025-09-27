@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<RCC>
+    <qresource prefix="/qml">
+        <file alias="MainView.qml">MainView.qml</file>
+    </qresource>
+</RCC>
