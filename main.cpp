@@ -11,6 +11,7 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    QQuickStyle::setStyle("Material");
     QgsApplication::initQgis();
 
     qDebug()<<"RADAR DISPLAY";
