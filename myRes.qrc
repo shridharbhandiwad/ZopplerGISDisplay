@@ -1,5 +1,9 @@
 <RCC>
     <qresource prefix="/qml">
         <file>MainView.qml</file>
+        <file>RichMainView.qml</file>
+        <file>MovableControl.qml</file>
+        <file>TrackTable.qml</file>
+        <file>ControlFactory.qml</file>
     </qresource>
 </RCC>
