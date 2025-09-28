@@ -4,6 +4,8 @@
 #include <QFileDialog>
 #include <QTableWidget>
 #include <QHeaderView>
+#include <QQmlContext>
+#include <QUrl>
 
 CMapMainWindow::CMapMainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -25,6 +27,16 @@ CMapMainWindow::CMapMainWindow(QWidget *parent) :
     m_dockTracks->setFeatures(QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetClosable);
     m_dockTracks->setWidget(ui->tableWidget);
     addDockWidget(Qt::RightDockWidgetArea, m_dockTracks);
+
+    // Qt Quick dashboard dock (rich UI)
+    m_quickWidget = new QQuickWidget(this);
+    m_quickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    m_quickWidget->setSource(QUrl("qrc:/qml/MainView.qml"));
+    m_dockQuick = new QDockWidget("Dashboard", this);
+    m_dockQuick->setObjectName("dockQuick");
+    m_dockQuick->setFeatures(QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetClosable);
+    m_dockQuick->setWidget(m_quickWidget);
+    addDockWidget(Qt::BottomDockWidgetArea, m_dockQuick);
 
     // Make docks tabbed for cleaner UI when docked on same edge
     tabifyDockWidget(m_dockControls, m_dockTracks);
@@ -54,7 +66,13 @@ CMapMainWindow::CMapMainWindow(QWidget *parent) :
     _m_updateTimer.start(1000);
 
 
-    m_dockControls->hide();
+    // Ensure controls and tracks docks are visible on startup
+    m_dockControls->show();
+    m_dockTracks->show();
+    m_dockQuick->show();
+
+    // Enable the table for interaction/visibility
+    ui->tableWidget->setEnabled(true);
     connect(ui->widgetMapCanvas, SIGNAL(signalMouseRead(QString)), this, SLOT(slotMouseRead(QString)));
 }
 
