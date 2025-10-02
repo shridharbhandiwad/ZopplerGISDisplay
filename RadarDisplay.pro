@@ -39,33 +39,41 @@ LIBS += -lgeos_c -lproj -lspatialindex
 
 SOURCES += \
         CoordinateConverter.cpp \
+        DemoApp.cpp \
+        MainView_qml.cpp \
+        MapDisplay/cgismapcontroller.cpp \
+        MapDisplay/cmapdisplay.cpp \
+        MapDisplay/cmapcanvas.cpp \
         MapDisplay/cppilayer.cpp \
         MapDisplay/csearchbeamlayer.cpp \
         MapDisplay/ctracklayer.cpp \
         MapDisplay/customgradiantfillsymbollayer.cpp \
         cdatawarehouse.cpp \
+        cmapmainwindow.cpp \
         cudpreceiver.cpp \
         main.cpp \
-        cmapmainwindow.cpp \
-        MapDisplay/cmapcanvas.cpp \
-        matrix.cpp
+        matrix.cpp \
+        qmlcache_loader.cpp
 
 HEADERS += \
         CoordinateConverter.h \
+        MapDisplay/cgismapcontroller.h \
+        MapDisplay/cmapcanvas.h \
+        MapDisplay/cmapdisplay.h \
         MapDisplay/cppilayer.h \
         MapDisplay/csearchbeamlayer.h \
         MapDisplay/ctracklayer.h \
         MapDisplay/customgradiantfillsymbollayer.h \
         cdatawarehouse.h \
         cmapmainwindow.h \
-        MapDisplay/cmapcanvas.h \
         cudpreceiver.h \
         globalmacros.h \
         globalstructs.h \
         matrix.h
 
 FORMS += \
-        cmapmainwindow.ui
+        cmapmainwindow.ui \
+        MapDisplay/cmapdisplay.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -74,4 +82,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 
 RESOURCES += \
-    myRes.qrc
+    myRes.qrc \
+    myRes_qmlcache.qrc
