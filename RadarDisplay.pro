@@ -7,12 +7,12 @@
 QT       += core gui widgets xml network concurrent qml quick quickwidgets quickcontrols2 charts
 
 
-OBJECTS_DIR = ../obj/OBJ
-MOC_DIR = ../obj/MOC
-UI_DIR = ../obj/UI
-RCC_DIR = ../obj/RCC
+OBJECTS_DIR = obj/OBJ
+MOC_DIR = obj/MOC
+UI_DIR = obj/UI
+RCC_DIR = obj/RCC
 
-TARGET = ../bin/RadarDisplay
+TARGET = bin/RadarDisplay
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
@@ -45,6 +45,7 @@ SOURCES += \
         MapDisplay/customgradiantfillsymbollayer.cpp \
         cdatawarehouse.cpp \
         cudpreceiver.cpp \
+        cgpsudpreceiver.cpp \
         main.cpp \
         cmapmainwindow.cpp \
         MapDisplay/cmapcanvas.cpp \
@@ -60,6 +61,7 @@ HEADERS += \
         cmapmainwindow.h \
         MapDisplay/cmapcanvas.h \
         cudpreceiver.h \
+        cgpsudpreceiver.h \
         globalmacros.h \
         globalstructs.h \
         matrix.h
