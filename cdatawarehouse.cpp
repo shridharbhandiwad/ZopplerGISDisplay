@@ -60,6 +60,10 @@ CDataWarehouse::CDataWarehouse(QObject *parent) : QObject(parent)
 
     _m_UdpRecvr.startListening(2025);
     connect(&_m_UdpRecvr,SIGNAL(signalUpdateTrackData(stTrackRecvInfo)),this,SLOT(slotUpdateTrackData(stTrackRecvInfo)));
+
+    // Start GPS UDP receiver on port 2026
+    _m_GpsUdpRecvr.startListening(2026);
+    connect(&_m_GpsUdpRecvr,SIGNAL(signalUpdateGpsData(stGpsRecvInfo)),this,SLOT(slotUpdateGpsData(stGpsRecvInfo)));
 }
 
 QList<stTrackDisplayInfo> CDataWarehouse::getTrackList() {
@@ -92,6 +96,38 @@ void CDataWarehouse::slotUpdateTrackData(stTrackRecvInfo trackRecvInfo) {
                            trackRecvInfo.x,trackRecvInfo.y,trackRecvInfo.z);
 
     _m_listTrackInfo.insert(info.nTrkId,info);
+}
+
+void CDataWarehouse::slotUpdateGpsData(stGpsRecvInfo gpsRecvInfo) {
+    stTrackDisplayInfo info;
+    info.nTrkId = gpsRecvInfo.nTrkId;
+    info.heading = gpsRecvInfo.heading;
+    info.velocity = gpsRecvInfo.velocity;
+    info.nTrackIden = gpsRecvInfo.nTrackIden;
+    info.nTrackTime = QDateTime::currentDateTime().toSecsSinceEpoch();
+    
+    // GPS data is already in lat/lon/alt format
+    info.lat = gpsRecvInfo.lat;
+    info.lon = gpsRecvInfo.lon;
+    info.alt = gpsRecvInfo.alt;
+    
+    // Convert GPS coordinates to local Cartesian coordinates for range/azimuth calculation
+    _m_CoordConv.geodetic2env(gpsRecvInfo.lat, gpsRecvInfo.lon, gpsRecvInfo.alt,
+                              _m_RadarPos.y(), _m_RadarPos.x(), 0, 
+                              &info.x, &info.y, &info.z, 0);
+    
+    // Calculate range, azimuth, elevation from Cartesian coordinates
+    _m_CoordConv.env2polar(&info.range, &info.azimuth, &info.elevation,
+                           info.x, info.y, info.z);
+    
+    // Set SNR to a default value (not provided in GPS data)
+    info.snr = 20.0; // Default SNR value
+    
+    _m_listTrackInfo.insert(info.nTrkId, info);
+    
+    qDebug() << "[CDataWarehouse] Updated GPS track" << info.nTrkId 
+             << "at" << info.lat << "," << info.lon << "alt:" << info.alt
+             << "range:" << info.range << "azimuth:" << info.azimuth;
 }
 
 const QPointF CDataWarehouse::getRadarPos() {
