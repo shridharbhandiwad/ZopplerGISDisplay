@@ -21,6 +21,9 @@ CDataWarehouse* CDataWarehouse::getInstance()
 
 CDataWarehouse::CDataWarehouse(QObject *parent) : QObject(parent)
 {
+    // Register metatype for cross-thread signal/slot communication
+    qRegisterMetaType<stTrackRecvInfo>("stTrackRecvInfo");
+    
     _m_RadarPos = QPointF(77.2946, 13.2716);
 
     stTrackRecvInfo info1;
@@ -79,6 +82,7 @@ void CDataWarehouse::slotClearTracksOnTimeOut() {
 }
 
 void CDataWarehouse::slotUpdateTrackData(stTrackRecvInfo trackRecvInfo) {
+    qDebug() << "[CDataWarehouse] slotUpdateTrackData called for track ID:" << trackRecvInfo.nTrkId;
 
     stTrackDisplayInfo info;
     info.nTrkId = trackRecvInfo.nTrkId;

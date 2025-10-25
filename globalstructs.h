@@ -42,4 +42,8 @@ struct stTrackDisplayInfo {
 
 #pragma pack()
 
+// Register custom types for use in Qt signal/slot across threads
+Q_DECLARE_METATYPE(stTrackRecvInfo)
+Q_DECLARE_METATYPE(stTrackDisplayInfo)
+
 #endif // GLOBALSTRUCTS_H
