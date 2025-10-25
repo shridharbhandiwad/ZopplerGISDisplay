@@ -58,8 +58,9 @@ CDataWarehouse::CDataWarehouse(QObject *parent) : QObject(parent)
     connect(&_m_timeTrackTimeout,SIGNAL(timeout()),this,SLOT(slotClearTracksOnTimeOut()));
     _m_timeTrackTimeout.start(1000);
 
-    _m_UdpRecvr.startListening(2025);
+    // Connect signal/slot BEFORE starting to listen to ensure no data is missed
     connect(&_m_UdpRecvr,SIGNAL(signalUpdateTrackData(stTrackRecvInfo)),this,SLOT(slotUpdateTrackData(stTrackRecvInfo)));
+    _m_UdpRecvr.startListening(2025);
 }
 
 QList<stTrackDisplayInfo> CDataWarehouse::getTrackList() {
