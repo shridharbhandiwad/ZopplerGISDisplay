@@ -21,7 +21,9 @@ CDataWarehouse* CDataWarehouse::getInstance()
 
 CDataWarehouse::CDataWarehouse(QObject *parent) : QObject(parent)
 {
-    // Register metatype for cross-thread signal/slot communication
+    qDebug() << "[CDataWarehouse] Constructor started";
+    
+    // Register metatype for signal/slot communication with custom types
     qRegisterMetaType<stTrackRecvInfo>("stTrackRecvInfo");
     
     _m_RadarPos = QPointF(77.2946, 13.2716);
@@ -61,9 +63,19 @@ CDataWarehouse::CDataWarehouse(QObject *parent) : QObject(parent)
     connect(&_m_timeTrackTimeout,SIGNAL(timeout()),this,SLOT(slotClearTracksOnTimeOut()));
     _m_timeTrackTimeout.start(1000);
 
-    // Connect signal/slot BEFORE starting to listen to ensure no data is missed
-    connect(&_m_UdpRecvr,SIGNAL(signalUpdateTrackData(stTrackRecvInfo)),this,SLOT(slotUpdateTrackData(stTrackRecvInfo)));
+    // Connect signal/slot BEFORE starting to listen - use new-style connect for type safety
+    bool connected = connect(&_m_UdpRecvr, &CUdpReceiver::signalUpdateTrackData,
+                            this, &CDataWarehouse::slotUpdateTrackData,
+                            Qt::DirectConnection);
+    
+    if (connected) {
+        qDebug() << "[CDataWarehouse] Signal/slot connection established successfully";
+    } else {
+        qCritical() << "[CDataWarehouse] FAILED to establish signal/slot connection!";
+    }
+    
     _m_UdpRecvr.startListening(2025);
+    qDebug() << "[CDataWarehouse] Constructor completed, listening on port 2025";
 }
 
 QList<stTrackDisplayInfo> CDataWarehouse::getTrackList() {

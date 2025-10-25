@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QUdpSocket>
-#include <QThread>
 #include "globalstructs.h"
 
 class CUdpReceiver : public QObject
@@ -43,7 +42,6 @@ public:
 
    private:
        QUdpSocket *m_pUdpSocket = nullptr;    //!< UDP socket for receiving data
-       QThread m_workerThread;                //!< Thread in which the receiver runs
        quint16 m_nListeningPort = 0;          //!< Port number to listen on
 };
 
