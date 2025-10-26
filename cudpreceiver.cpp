@@ -1,31 +1,23 @@
 #include "cudpreceiver.h"
+#include <QDebug>
 
 /**
  * @brief CUdpReceiver constructor
- *        Initializes and moves the receiver to a separate thread.
+ *        Initializes the UDP receiver (runs in the same thread as parent)
  */
 CUdpReceiver::CUdpReceiver(QObject *parent) : QObject(parent)
 {
-    // Move this object to the worker thread
-    this->moveToThread(&m_workerThread);
-
-    // Connect thread finish signal to delete this object safely
-    connect(&m_workerThread, &QThread::finished, this, &QObject::deleteLater);
-
-    // Start the thread
-    m_workerThread.start();
+    qDebug() << "[CUdpReceiver] Constructor called";
 }
 
 
 /**
  * @brief CUdpReceiver destructor
- *        Cleans up the thread and socket
+ *        Cleans up the socket
  */
 CUdpReceiver::~CUdpReceiver()
 {
     stopListening();
-    m_workerThread.quit();
-    m_workerThread.wait();
 }
 
 /**
@@ -36,25 +28,28 @@ void CUdpReceiver::startListening(quint16 nPort)
 {
     m_nListeningPort = nPort;
 
-    // Run this in the receiver thread
-    QMetaObject::invokeMethod(this, [this]() {
-        m_pUdpSocket = new QUdpSocket();
+    // Clean up any existing socket
+    if (m_pUdpSocket) {
+        stopListening();
+    }
 
-        // Bind to the given port
-        if (!m_pUdpSocket->bind(QHostAddress::AnyIPv4, m_nListeningPort)) {
-            qCritical() << "[CUdpReceiver] Failed to bind to port"
-                        << m_nListeningPort << ":" << m_pUdpSocket->errorString();
-            delete m_pUdpSocket;
-            m_pUdpSocket = nullptr;
-            return;
-        }
+    // Create UDP socket
+    m_pUdpSocket = new QUdpSocket(this);
 
-        // Connect readyRead to our processing slot
-        connect(m_pUdpSocket, &QUdpSocket::readyRead,
-                this, &CUdpReceiver::_processPendingDatagrams);
+    // Bind to the given port
+    if (!m_pUdpSocket->bind(QHostAddress::AnyIPv4, m_nListeningPort)) {
+        qCritical() << "[CUdpReceiver] Failed to bind to port"
+                    << m_nListeningPort << ":" << m_pUdpSocket->errorString();
+        delete m_pUdpSocket;
+        m_pUdpSocket = nullptr;
+        return;
+    }
 
-        qDebug() << "[CUdpReceiver] Listening on port" << m_nListeningPort;
-    });
+    // Connect readyRead to our processing slot - direct connection for immediate processing
+    connect(m_pUdpSocket, &QUdpSocket::readyRead,
+            this, &CUdpReceiver::_processPendingDatagrams, Qt::DirectConnection);
+
+    qDebug() << "[CUdpReceiver] Successfully listening on port" << m_nListeningPort;
 }
 
 /**
@@ -62,47 +57,60 @@ void CUdpReceiver::startListening(quint16 nPort)
  */
 void CUdpReceiver::stopListening()
 {
-    QMetaObject::invokeMethod(this, [this]() {
-        if (m_pUdpSocket) {
-            m_pUdpSocket->close();
-            m_pUdpSocket->deleteLater();
-            m_pUdpSocket = nullptr;
-            qDebug() << "[CUdpReceiver] Stopped listening on port" << m_nListeningPort;
-        }
-    });
+    if (m_pUdpSocket) {
+        m_pUdpSocket->close();
+        m_pUdpSocket->deleteLater();
+        m_pUdpSocket = nullptr;
+        qDebug() << "[CUdpReceiver] Stopped listening on port" << m_nListeningPort;
+    }
 }
 
 /**
- * @brief Handles incoming datagrams and emits track data signals
+ * @brief Handles incoming datagrams and emits track data signals immediately
  */
 void CUdpReceiver::_processPendingDatagrams()
 {
+    qDebug() << "[CUdpReceiver] _processPendingDatagrams() called - data available!";
+    
     while (m_pUdpSocket && m_pUdpSocket->hasPendingDatagrams()) {
         QByteArray baDatagram;
-        baDatagram.resize(static_cast<int>(m_pUdpSocket->pendingDatagramSize()));
+        qint64 datagramSize = m_pUdpSocket->pendingDatagramSize();
+        baDatagram.resize(static_cast<int>(datagramSize));
 
         QHostAddress sender;
         quint16 nSenderPort;
 
-        if (m_pUdpSocket->readDatagram(baDatagram.data(), baDatagram.size(),
-                                       &sender, &nSenderPort) == -1) {
+        qint64 bytesRead = m_pUdpSocket->readDatagram(baDatagram.data(), baDatagram.size(),
+                                                      &sender, &nSenderPort);
+        
+        if (bytesRead == -1) {
             qWarning() << "[CUdpReceiver] Failed to read datagram:"
                        << m_pUdpSocket->errorString();
             continue;
         }
 
-
+        qDebug() << "[CUdpReceiver] Datagram received from" << sender.toString() 
+                 << "port" << nSenderPort << "size:" << bytesRead << "bytes";
 
         // Check size of received datagram
         if (baDatagram.size() == sizeof(stTrackRecvInfo)) {
             stTrackRecvInfo stTrack;
             memcpy(&stTrack, baDatagram.constData(), sizeof(stTrackRecvInfo));
 
-            // Emit signal with parsed track
+            qDebug() << "[CUdpReceiver] Parsed track - MsgID:" << stTrack.usMsgId
+                     << "TrackID:" << stTrack.nTrkId 
+                     << "Pos(X,Y,Z):" << stTrack.x << stTrack.y << stTrack.z
+                     << "Heading:" << stTrack.heading << "Velocity:" << stTrack.velocity;
+            
+            // Emit signal with parsed track - IMMEDIATE emission
+            qDebug() << "[CUdpReceiver] About to emit signal for track ID:" << stTrack.nTrkId;
             emit signalUpdateTrackData(stTrack);
+            qDebug() << "[CUdpReceiver] Signal emitted successfully for track ID:" << stTrack.nTrkId;
         } else {
             qWarning() << "[CUdpReceiver] Invalid datagram size:" << baDatagram.size()
-                       << ", expected:" << sizeof(stTrackRecvInfo);
+                       << "bytes, expected:" << sizeof(stTrackRecvInfo) << "bytes";
         }
     }
+    
+    qDebug() << "[CUdpReceiver] _processPendingDatagrams() completed";
 }
