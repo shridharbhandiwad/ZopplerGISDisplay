@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 #include <QDebug>
 #include <QQuickPaintedItem>
+#include <QDateTime>
 #include "cmapdisplay.h"
 
 
@@ -36,6 +37,9 @@ private:
     CMapDisplay *displ;
 
     QTimer _animationTimer;
+    QImage _cachedImage;         // Cache the rendered image
+    bool _needsRepaint;          // Flag to track if repaint is needed
+    qint64 _lastHoverTime = 0;   // Track last hover event time for throttling
 
     void routeMouseEvents(QMouseEvent *event);
     void routeWheelEvents(QWheelEvent *event);

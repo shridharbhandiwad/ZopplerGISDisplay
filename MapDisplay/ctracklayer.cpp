@@ -32,6 +32,7 @@ QRectF CTrackLayer::boundingRect() const
 void CTrackLayer::_UpdateAnimation()
 {
     nAnimFrame = (nAnimFrame + 2) % 20; // Loop from 0–19
+    m_tracksDirty = true;  // Mark tracks as needing re-render for animation
     update(); // Redraw
 }
 
@@ -47,23 +48,38 @@ void CTrackLayer::paint(QPainter *pPainter)
 
     // Transform geographic positions to screen coordinates
     const QgsMapToPixel &mapToPixel = m_canvas->mapSettings().mapToPixel();
+    double pixelPerDegree = 1.0 / m_canvas->mapUnitsPerPixel();
 
     QList<stTrackDisplayInfo> listTracks = CDataWarehouse::getInstance()->getTrackList();
 
+    // Pre-calculate common values
+    bool showDetails = (pixelPerDegree > PPI_VISIBLE_THRESHOLD);
+    bool showText = (pixelPerDegree > TEXT_VISIBLE_THRESHOLD);
+    
+    // Pre-allocate font if needed
+    static QFont trackFont("century", 11, 80, true);
+
     for (const stTrackDisplayInfo &track : listTracks) {
         QPointF ptScreen = mapToPixel.transform(QgsPointXY(track.lon, track.lat)).toQPointF();
-        double pixelPerDegree = 1.0 / m_canvas->mapUnitsPerPixel();
-        QColor  clr = Qt::cyan;
+        
+        // Determine color once
+        QColor clr;
         switch (track.nTrackIden)  {
-        case TRACK_IDENTITY_UNKNOWN : clr = Qt::yellow;
-                break;
-        case TRACK_IDENTITY_FRIEND :  clr  = Qt::green;
-           break;
-        case TRACK_IDENTITY_HOSTILE : clr =  Qt::red;;
-           break;
-
+        case TRACK_IDENTITY_UNKNOWN: 
+            clr = Qt::yellow;
+            break;
+        case TRACK_IDENTITY_FRIEND:  
+            clr = Qt::green;
+            break;
+        case TRACK_IDENTITY_HOSTILE: 
+            clr = Qt::red;
+            break;
+        default:
+            clr = Qt::cyan;
+            break;
         }
-        if ( pixelPerDegree > PPI_VISIBLE_THRESHOLD ) {
+        
+        if (showDetails) {
             // Core dot
             pPainter->setPen(clr);
             pPainter->setBrush(clr);
@@ -77,23 +93,22 @@ void CTrackLayer::paint(QPainter *pPainter)
             );
             pPainter->drawLine(ptScreen, ptTip);
 
-            if ( pixelPerDegree > TEXT_VISIBLE_THRESHOLD ) {
-                pPainter->setFont(QFont("century",11,80,true));
+            if (showText) {
+                pPainter->setFont(trackFont);
                 // Label
                 pPainter->setPen(Qt::white);
                 pPainter->drawText(ptScreen + QPointF(6, -6), QString::number(track.nTrkId));
             }
         }
 
-        // Glowing blip animation
-        int nMaxRadius = 20;
+        // Glowing blip animation - only calculate when needed
+        const int nMaxRadius = 20;
         int nCurrentRadius = 4 + (nAnimFrame * (nMaxRadius - 4) / 20);
         int nAlpha = 255 - (nAnimFrame * 255 / 20); // Fades out
 
         // Gradient blip: transparent center → bright edge
         QRadialGradient gradient(ptScreen, nCurrentRadius);
-        QColor clrEdge(clr.red(), clr.green(), clr.blue(), nAlpha);    // Bright neon green at edge
-        //QColor clrCenter(0, 255, 255, 0);       // Fully transparent center
+        QColor clrEdge(clr.red(), clr.green(), clr.blue(), nAlpha);
 
         gradient.setColorAt(0, Qt::cyan);
         gradient.setColorAt(0.5, clr);   // Center of the blip
