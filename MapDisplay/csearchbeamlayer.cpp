@@ -15,7 +15,7 @@ CSearchBeamLayer::CSearchBeamLayer(QgsMapCanvas *canvas)
            if (_sweepAngle >= 360.0) _sweepAngle = 0.0;
            update();  // Trigger repaint
        });
-       _animationTimer.start(10);  // ~33 FPS
+       _animationTimer.start(33);  // ~30 FPS (reduced from 10ms/100FPS for better performance)
 }
 
 QgsMapCanvas *CSearchBeamLayer::canvas() {
@@ -56,10 +56,6 @@ void CSearchBeamLayer::paint(QPainter *painter)
 {
     if (!canvas()) return;
 
-    double metersPerDegreeLat = 111132.0; // avg for latitude
-    double metersPerDegreeLon = 111320.0 * std::cos(qDegreesToRadians(m_center.y())); // depends on latitude
-
-
     painter->setRenderHint(QPainter::Antialiasing, true);
 
     double pixelPerDegree = 1.0 / canvas()->mapUnitsPerPixel();
@@ -68,18 +64,23 @@ void CSearchBeamLayer::paint(QPainter *painter)
         return;
     }
 
+    // Pre-calculate constants to avoid repeated calculations
+    static const double metersPerDegreeLat = 111132.0; // avg for latitude
+    double metersPerDegreeLon = 111320.0 * std::cos(qDegreesToRadians(m_center.y())); // depends on latitude
+
     double pixelPerMeterX = pixelPerDegree / metersPerDegreeLon;
     double pixelPerMeterY = pixelPerDegree / metersPerDegreeLat;
 
     // Draw radar sweep beam
-    double sweepWidth = 60.0; // in degrees
+    static const double sweepWidth = 60.0; // in degrees
     double startAngle = (360 - _sweepAngle) - sweepWidth / 2.0;
     double endAngle = (360 - _sweepAngle) + sweepWidth / 2.0;
 
     QPainterPath beamPath;
     beamPath.moveTo(m_centerScreen);
 
-    for (double angle = startAngle; angle <= endAngle; angle += 1.0) {
+    // Reduce path complexity for better performance - step by 2 degrees instead of 1
+    for (double angle = startAngle; angle <= endAngle; angle += 2.0) {
         double radians = qDegreesToRadians(angle);
         double x = m_centerScreen.x() + std::cos(radians) * m_maxRange * pixelPerMeterX;
         double y = m_centerScreen.y() - std::sin(radians) * m_maxRange * pixelPerMeterY;

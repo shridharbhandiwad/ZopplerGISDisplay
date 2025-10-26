@@ -1,7 +1,7 @@
 #include "cgismapcontroller.h"
 
 
-CGISMapController::CGISMapController(QQuickItem *parent) : QQuickPaintedItem(parent)
+CGISMapController::CGISMapController(QQuickItem *parent) : QQuickPaintedItem(parent), _needsRepaint(false)
 {
     setRenderTarget(QQuickPaintedItem::FramebufferObject);
     setAcceptedMouseButtons(Qt::AllButtons);
@@ -17,16 +17,24 @@ CGISMapController::CGISMapController(QQuickItem *parent) : QQuickPaintedItem(par
     _m_pObjMapCanvas->Initialize();
     _m_pObjMapCanvas->refresh();
     _m_pObjMapCanvas->show();
-    _m_pObjMapCanvas->
 
     connect( this, &QQuickPaintedItem::widthChanged, this, &CGISMapController::updateMapCanvasSize );
     connect( this, &QQuickPaintedItem::heightChanged, this, &CGISMapController::updateMapCanvasSize );
 
-    connect(&_animationTimer, &QTimer::timeout, this, [this]() {
-        //_frame++;
-        update();  // Trigger paint()
+    // Connect canvas refresh to our repaint flag
+    connect(_m_pObjMapCanvas, &QgsMapCanvas::mapCanvasRefreshed, this, [this]() {
+        _needsRepaint = true;
+        update();
     });
-    _animationTimer.start(16); // ~60 FPS
+
+    // Reduced update frequency - only update when needed
+    connect(&_animationTimer, &QTimer::timeout, this, [this]() {
+        // Only trigger repaint if something changed
+        if (_needsRepaint) {
+            update();
+        }
+    });
+    _animationTimer.start(33); // ~30 FPS instead of 60 FPS - more efficient
 
 }
 
@@ -41,27 +49,25 @@ void CGISMapController::paint(QPainter *painter)
     if (!_m_pObjMapCanvas)
         return;
 
+    // Only render if we need to repaint or cache is invalid
+    if (_needsRepaint || _cachedImage.isNull() || _cachedImage.size() != _m_pObjMapCanvas->size()) {
+        _cachedImage = QImage(_m_pObjMapCanvas->size(), QImage::Format_ARGB32_Premultiplied);
+        
+        QPainter imagePainter(&_cachedImage);
+        _m_pObjMapCanvas->render(&imagePainter);
+        imagePainter.end();
+        
+        _needsRepaint = false;
+    }
 
-    //painter->setBrush(QBrush(Qt::red));
-    //painter->drawRect(0,0,width(),height());
-
-    //_m_pObjMapCanvas->fitInView(0,0,width(),height());
-    //_m_pObjMapCanvas->render(painter);
-
-  QImage image(_m_pObjMapCanvas->size(), QImage::Format_RGBA64_Premultiplied);
-//    image.fill(Qt::red);
-
-    QPainter imagePainter(&image);
-    _m_pObjMapCanvas->render(&imagePainter);
-    imagePainter.end();
-
-    painter->drawImage(0, 0, image);
+    painter->drawImage(0, 0, _cachedImage);
 }
 
 void CGISMapController::mousePressEvent( QMouseEvent* event )
 {
     if (_m_pObjMapCanvas)  {
         _m_pObjMapCanvas->mousePressEvent(event);
+        _needsRepaint = true;  // Mark for repaint on mouse press
     }
 
     QQuickPaintedItem::mousePressEvent(event);
@@ -71,6 +77,7 @@ void CGISMapController::mouseReleaseEvent( QMouseEvent* event )
 {
     if (_m_pObjMapCanvas)  {
         _m_pObjMapCanvas->mouseReleaseEvent(event);
+        _needsRepaint = true;  // Mark for repaint on mouse release
     }
 
     QQuickPaintedItem::mouseReleaseEvent(event);
@@ -79,10 +86,15 @@ void CGISMapController::mouseReleaseEvent( QMouseEvent* event )
 void CGISMapController::hoverMoveEvent( QHoverEvent* event )
 {
     if (_m_pObjMapCanvas)  {
+        // Throttle hover events - only process if enough time has passed
+        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+        if (currentTime - _lastHoverTime < 50) { // Throttle to max 20 updates/sec
+            QQuickPaintedItem::hoverMoveEvent(event);
+            return;
+        }
+        _lastHoverTime = currentTime;
 
         QPointF posF = event->pos();  // position in QQuickItem
-        //QPoint pos = posF.toPoint();
-
 
         QMouseEvent mouseMoveEvent(
             QEvent::MouseMove,
@@ -110,6 +122,7 @@ void CGISMapController::wheelEvent( QWheelEvent *event )
 {
     if (_m_pObjMapCanvas)  {
         _m_pObjMapCanvas->wheelEvent(event);
+        _needsRepaint = true;  // Mark for repaint on wheel event
     }
 
     QQuickPaintedItem::wheelEvent(event);
@@ -154,9 +167,8 @@ void CGISMapController::updateMapCanvasSize()
     if (_m_pObjMapCanvas)
     {
         _m_pObjMapCanvas->setGeometry(globalPos.x(),globalPos.y(), (int)width(), (int)height());
-        //update();
-        //_m_pObjMapCanvas->update();;
-        //_m_pObjMapCanvas->setViewport(QRect(0, 0, (int)width(), (int)height()));
+        _needsRepaint = true;  // Mark for repaint on size change
+        _cachedImage = QImage();  // Invalidate cache when size changes
     }
 }
 

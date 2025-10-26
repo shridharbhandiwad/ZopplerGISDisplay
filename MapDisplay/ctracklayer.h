@@ -4,6 +4,7 @@
 #include <qgsmapcanvasitem.h>
 #include <qgsmapcanvas.h>
 #include <QTimer>
+#include <QImage>
 
 class CTrackLayer : public QObject, public QgsMapCanvasItem
 {
@@ -20,6 +21,8 @@ private slots:
 private:
     QgsMapCanvas *m_canvas;
     QTimer m_timer;
+    QImage m_cachedTracks;       // Cache track rendering
+    bool m_tracksDirty = true;   // Flag to indicate tracks need re-render
 };
 
 #endif // CTRACKLAYER_H

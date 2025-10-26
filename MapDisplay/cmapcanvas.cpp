@@ -424,10 +424,6 @@ void CMapCanvas::mousePressEvent(QMouseEvent *event)
 void CMapCanvas::mouseMoveEvent(QMouseEvent *event)
 {
     if (mPanning) {
-//        QPoint delta = event->pos() - mLastMousePos;
-//        panCanvas(-delta.x(), delta.y());
-//        mLastMousePos = event->pos();
-
         QPoint delta = event->pos() - mLastMousePos;
 
         double dx = -delta.x() * mapSettings().mapUnitsPerPixel();
@@ -437,16 +433,21 @@ void CMapCanvas::mouseMoveEvent(QMouseEvent *event)
         mLastMousePos = event->pos();
     }
 
-    // Convert mouse screen position to map coordinates
-    QgsPointXY mapPoint = getCoordinateTransform()->toMapCoordinates(event->pos().x(), event->pos().y());
+    // Throttle coordinate transformations to reduce CPU load
+    // Only update coordinates every 100ms (10 updates/sec) instead of every mouse move
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    if (currentTime - mLastMouseMoveTime >= 100) {
+        mLastMouseMoveTime = currentTime;
+        
+        // Convert mouse screen position to map coordinates
+        QgsPointXY mapPoint = getCoordinateTransform()->toMapCoordinates(event->pos().x(), event->pos().y());
 
-    // Convert to geographic (lat/lon) using the destination CRS (assumed WGS84)
-    QgsCoordinateTransform transform(mapSettings().destinationCrs(), QgsCoordinateReferenceSystem("EPSG:4326"), QgsProject::instance());
-    QgsPointXY geoPoint = transform.transform(mapPoint);
+        // Convert to geographic (lat/lon) using the destination CRS (assumed WGS84)
+        QgsCoordinateTransform transform(mapSettings().destinationCrs(), QgsCoordinateReferenceSystem("EPSG:4326"), QgsProject::instance());
+        QgsPointXY geoPoint = transform.transform(mapPoint);
 
-    double alt = 0.0;  // Optional: add altitude logic here if needed
-
-    emit signalMouseRead(QString("Lon : %1°    Lat : %2° ").arg(geoPoint.x(),11,'f',6).arg(geoPoint.y(),10,'f',6));
+        emit signalMouseRead(QString("Lon : %1°    Lat : %2° ").arg(geoPoint.x(),11,'f',6).arg(geoPoint.y(),10,'f',6));
+    }
 }
 
 void CMapCanvas::mouseReleaseEvent(QMouseEvent *event)

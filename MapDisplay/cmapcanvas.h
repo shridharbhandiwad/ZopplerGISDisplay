@@ -10,6 +10,7 @@
 #include "qgsrasterlayer.h"
 #include <QProcess>
 #include <QProgressDialog>
+#include <QDateTime>
 
 
 class CMapCanvas : public QgsMapCanvas
@@ -46,6 +47,7 @@ private:
 
     QPoint mLastMousePos;
     bool mPanning = false;
+    qint64 mLastMouseMoveTime = 0;  // Track last mouse move time for throttling
 
     void _loadVectorMaps();
     void loadShapeFile(const QString &shpPath);
