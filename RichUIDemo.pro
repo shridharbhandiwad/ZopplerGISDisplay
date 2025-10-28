@@ -6,10 +6,13 @@ TARGET = RichUIDemo
 TEMPLATE = app
 
 SOURCES += \
-    DemoApp.cpp
+    DemoApp.cpp \
+    MainView_qml.cpp \
+    qmlcache_loader.cpp
 
 RESOURCES += \
-    myRes.qrc
+    myRes.qrc \
+    myRes_qmlcache.qrc
 
 # Default rules for deployment
 qnx: target.path = /tmp/$${TARGET}/bin
