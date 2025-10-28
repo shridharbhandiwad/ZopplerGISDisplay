@@ -5,6 +5,7 @@
 #include "globalstructs.h"
 #include <QMutex>
 #include "cudpreceiver.h"
+#include "cgpsudpreceiver.h"
 #include "CoordinateConverter.h"
 #include <QPointF>
 #include <QTimer>
@@ -25,6 +26,7 @@ public :
     const QPointF getRadarPos();
 private slots:
     void slotUpdateTrackData(stTrackRecvInfo trackRecvInfo);
+    void slotUpdateGpsData(stGpsRecvInfo gpsRecvInfo);
     void slotClearTracksOnTimeOut();
 private:
     /**
@@ -42,6 +44,7 @@ private:
     QHash<int,stTrackDisplayInfo> _m_listTrackInfo;
 
     CUdpReceiver _m_UdpRecvr;
+    CGpsUdpReceiver _m_GpsUdpRecvr;
 
     CoordinateConverter _m_CoordConv;
 

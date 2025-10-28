@@ -22,6 +22,18 @@ struct stTrackRecvInfo {
     int nTrackIden;
 };
 
+// GPS data structure for direct lat/lon/alt reception
+struct stGpsRecvInfo {
+    unsigned short usMsgId;    //!< Message ID
+    int nTrkId;                //!< Track ID
+    double lat;                //!< Latitude (degrees)
+    double lon;                //!< Longitude (degrees)
+    double alt;                //!< Altitude (meters)
+    float heading;             //!< Heading (degrees)
+    float velocity;            //!< Velocity (m/s)
+    int nTrackIden;            //!< Track identity
+};
+
 struct stTrackDisplayInfo {
     int nTrkId;                 //!< Track ID
     float x;                    //!< X-coordinate
